@@ -23,7 +23,7 @@ const renderLandingPage = (highlight) => {
     content.appendChild(blog);
     {% for post in site.posts limit:page.blog_limit %}
     // append html
-    blog.innerHTML += blogRender("{{post.category}}", "{{post.title}}", "{{ post.date | date_to_string }}", "{{ post.description | truncate_words: 20 }}", "{{post.url}}" ,"{{post.cover_image}}")
+    blog.innerHTML += blogRender("{{post.category}}", "{{post.title}}", "{{ post.date | date_to_string }}", "{{ post.description | truncate_words: 20 }}", "{{post.url | prepend:site.baseurl}}" ,"{{post.cover_image}}")
     {% endfor %}
     document.querySelector('#footer').innerHTML = footRender(); // footer
 }

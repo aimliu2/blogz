@@ -2,10 +2,10 @@
 permalink : /assets/ts/js/navbar/navbar.js
 ---
 const navmenu = {
-    "Home" : "{{site.url}}", 
-    "Blog" : "{{site.url}}/pages/blog", 
-    "Contact" : "{{site.url}}/pages/contact", 
-    "About" : "{{site.url}}/pages/changelog"
+    "Home" : "{{ site.baseurl }}", 
+    "Blog" : "{{ site.baseurl }}/pages/blog", 
+    "Contact" : "{{ site.baseurl }}/pages/contact", 
+    "About" : "{{ site.baseurl }}/pages/changelog"
     }
 
 export const navRender = (choice) =>{
@@ -18,7 +18,7 @@ export const navRender = (choice) =>{
     return (`
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{site.url}}">The Aim Liu Blog</a>
+            <a class="navbar-brand" href="{{ site.baseurl }}">The Aim Liu Blog</a>
             <button class="navbar-toggler" 
             type="button" 
             data-bs-toggle="collapse" 
