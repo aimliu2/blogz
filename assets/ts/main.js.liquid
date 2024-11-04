@@ -3,11 +3,11 @@ blog_limit : 4
 permalink : /assets/ts/main.js
 ---
 
-import {navRender} from "{% link assets/ts/js/navbar/navbar.js.liquid %}"
-import {heroRender} from "{% link assets/ts/js/hero/hero.js.liquid %}"
-import {footRender} from "{% link assets/ts/js/footer/footer.js.liquid %}"
-import {blogRender} from "{% link assets/ts/js/blogs/blogpage.js.liquid %}"
-import {docReady, construct, s_arr} from "{% link assets/ts/js/app.js.liquid %}"
+import {navRender} from "{{ site.baseurl }}/assets/ts/js/navbar/navbar.js.liquid"
+import {heroRender} from "{{ site.baseurl }}/assets/ts/js/hero/hero.js.liquid"
+import {footRender} from "{{ site.baseurl }}/assets/ts/js/footer/footer.js.liquid"
+import {blogRender} from "{{ site.baseurl }}/assets/ts/js/blogs/blogpage.js.liquid"
+import {docReady, construct, s_arr} from "{{ site.baseurl }}/assets/ts/js/app.js.liquid"
 
 // execute
 // render components in order
