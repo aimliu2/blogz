@@ -38,7 +38,7 @@ build-iPhoneSimulator/
 # vendor/Pods/
 
 ## Documentation cache and generated files:
-_site
+_site/
 .jekyll-cache
 /.yardoc/
 /_yardoc/
