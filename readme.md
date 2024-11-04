@@ -1,3 +1,4 @@
 # Readme
-blog
+## test jekyll
+`bundle exec jekyll serve --trace    `
 

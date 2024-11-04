@@ -20,7 +20,7 @@
     <script src="{% link assets/ts/js/libs/jszip-utils.min.js %}"></script>
     <script src="{% link assets/ts/js/libs/FileSaver.min.js %}"></script>
     <!-- load other assets -->
-    <link rel="stylesheet" href="{%link assets/css/footer/footer.css%}" />
+    <link rel="stylesheet" href="{{ site.baseurl }}/assets/css/footer/footer.css/" />
   </header>
   <body>
     <nav id="navbar"></nav>
@@ -28,7 +28,7 @@
     <footer id="footer"></footer>
   </body>
   <script type="module">
-    import {  docReady, renderHeadFoot } from "{% link assets/ts/js/app.js.liquid %}"
+    import {  docReady, renderHeadFoot } from "{{ site.baseurl }}assets/ts/js/app.js.liquid"
     // execute
     docReady(renderHeadFoot('Blog'))
   </script>
