@@ -10,6 +10,6 @@ permalink: '/pages/contact'
 <footer id="footer"></footer>
 
 <script type="module">
-    import {docReady, renderHeadFoot } from "{% link assets/ts/js/app.js.liquid %}"
+    import {docReady, renderHeadFoot } from "{{ site.baseurl }}/assets/ts/js/app.js"
     docReady(renderHeadFoot('Contact'))
 </script>

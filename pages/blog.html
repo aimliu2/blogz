@@ -11,13 +11,13 @@ blog_limit : 8
 <footer id="footer"></footer>
 
 <script type="module">
-    import {blogRender} from "{% link assets/ts/js/blogs/blogpage.js.liquid %}"
-    import {docReady, renderHeadFoot } from "{% link assets/ts/js/app.js.liquid %}"
+    import {blogRender} from "{{ site.baseurl }}/assets/ts/js/blogs/blogpage.js"
+    import {docReady, renderHeadFoot } from "{{ site.baseurl }}/assets/ts/js/app.js"
 
     docReady(renderHeadFoot('Blog'))
     const blogHMTL = document.querySelector('#blog')
     {% for post in site.posts limit:page.blog_limit %}
     // append html
-        blogHMTL.innerHTML += blogRender("{{post.category}}", "{{post.title}}", "{{ post.date | date_to_string }}", "{{ post.description | truncate_words: 20 }}", "{{post.url}}" ,"{{post.cover_image}}")
+        blogHMTL.innerHTML += blogRender("{{post.category}}", "{{post.title}}", "{{ post.date | date_to_string }}", "{{ post.description | truncate_words: 20 }}", "{{ post.url | prepend:site.baseurl }}" ,"{{post.cover_image}}")
     {% endfor %}
 </script>
