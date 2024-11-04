@@ -1,0 +1,23 @@
+---
+layout: default
+title: The Aim Liu Blog
+permalink: '/pages/blog'
+blog_limit : 8
+---
+<nav id="navbar"></nav>
+<div class="container">
+<div id="blog" class="row mb-2"></div>
+</div>
+<footer id="footer"></footer>
+
+<script type="module">
+    import {blogRender} from "{% link assets/ts/js/blogs/blogpage.js.liquid %}"
+    import {docReady, renderHeadFoot } from "{% link assets/ts/js/app.js.liquid %}"
+
+    docReady(renderHeadFoot('Blog'))
+    const blogHMTL = document.querySelector('#blog')
+    {% for post in site.posts limit:page.blog_limit %}
+    // append html
+        blogHMTL.innerHTML += blogRender("{{post.category}}", "{{post.title}}", "{{ post.date | date_to_string }}", "{{ post.description | truncate_words: 20 }}", "{{post.url}}" ,"{{post.cover_image}}")
+    {% endfor %}
+</script>

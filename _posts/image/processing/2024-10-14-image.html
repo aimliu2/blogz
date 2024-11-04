@@ -1,0 +1,528 @@
+---
+layout: blogImage
+title: 0.95 Img Byte Resize
+description: Simple Image Byte Resize
+category: image
+categories: ['image','processing']
+tags: ['Html','Image']
+published: true
+note : upload card till thres i.e. 3 then start carousel on 4 and so on carousel active on 4th ?
+cover_image : "https://www.online.colostate.edu/global/images/degrees/soil-and-crop-sciences-1200.jpg"
+---
+<div class="container">
+  <h2 class="text-center">{{page.title}}</h2>
+</div>
+<div class="container">
+
+  <!-- dropzone -->
+  <div id="dropzone" class="dropzone">
+    <div class="card border-light text-center">
+    <img class="mx-auto" src="{%link assets/images/upload.svg %}" alt="upload" width="100px"/>
+    <input type="file" class="files-input" id="images" accept="image/png, image/jpeg, image/webp" multiple />
+    <label class="input-btn" for="images">Choose multiple images</label>
+    <h4>or drag & drop your PNG, JPEG files here</h4>
+    </div> 
+    <!-- end card -->
+  </div>
+  <!-- end drop zone  -->
+
+</div> 
+
+<div class="container">
+<section class="mx-auto">
+  <!-- Swiper container -->
+  <div class="swiper mySwiper container">
+    <div class="swiper-wrapper content">
+      <!-- add content -->
+    </div>
+  </div>
+
+  <!-- Swiper navigation buttons -->
+  <div class="swiper-button-next"></div>
+  <div class="swiper-button-prev"></div>
+  <div class="swiper-pagination"></div>
+</section>
+
+<div class="d-flex justify-content-center">
+  <p id="download-all"></p>
+  <p class="pt-1 px-2" id="total-slides"></p>
+</div>
+
+</div>
+
+<div id="allModal"></div>
+ 
+<!-- script -->
+<script>
+const dropzone = document.querySelector('#dropzone');
+const displayzone = document.querySelector('.swiper-wrapper')
+const totalslides = document.querySelector('#total-slides')
+const downloadAllbutton = document.querySelector('#download-all')
+const modal = document.querySelector('#allModal')
+
+const filesInput = document.querySelector('.files-input');
+
+// dropzone set active
+const setActive = (dropzone, active = true) => {
+    // active class
+    const hasActiveClass = dropzone.classList.contains('active');
+
+    if (active && !hasActiveClass) {
+        return dropzone.classList.add('active');
+    }
+
+    if (!active && hasActiveClass) {
+        return dropzone.classList.remove('active');
+    }
+};
+
+['dragenter','dragover'].forEach(evt => 
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    setActive(dropzone);
+  }
+));
+
+// dropzone.addEventListener('dragenter', (e) => {
+//     e.preventDefault();
+//     setActive(dropzone);
+// });
+// dropzone.addEventListener('dragover', (e) => {
+//     e.preventDefault();
+//     setActive(dropzone);
+// });
+
+dropzone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    setActive(dropzone, false);
+});
+
+// bind handleImages functions
+dropzone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    setActive(dropzone, false);
+    // get the valid files
+    const { files } = e.dataTransfer;
+    handleImages(files).then(()=>{
+      // reset file value, enable reupload
+      filesInput.value = '';
+    })
+});
+
+filesInput.addEventListener('change', async (e) => {
+    const { files } = e.target; // Filelist
+    handleImages(files).then(()=>{
+      // reset file value, enable reupload
+      filesInput.value = '';
+    })
+    
+});
+
+const isObjectEmpty = (objectName) => {
+  return (
+    objectName &&
+    Object.keys(objectName).length === 0 &&
+    objectName.constructor === Object
+  );
+};
+
+const acceptFormat = ['image/jpe','image/jpg', 'image/jpeg', 'image/png']
+
+const handleImages = async (files) => {
+    // validate images
+    const validImages = [...files].filter((file) =>
+    acceptFormat.includes(file.type)
+    ); // Array of files [file1, file2, ...]
+    // try another logic sequencing
+    Promise.all(validImages.map(processImageData))
+      .then(jarr => { // [{}, {},...] Array of Objects
+        jarr.map(jobj => { 
+          displayImageData(jobj)
+      })// end map
+    }) // end then 
+};
+
+const defaultCompression = 0.95
+
+// Why can't manipulate after this ?
+const processImageData = async (this_img) => {
+    return new Promise(resolve => {
+      const j = new Object(), id = + new Date(), blobURL = URL.createObjectURL(this_img) // 1st blob on disk
+      const mime = this_img.type;
+      blob2canvas(blobURL,`raw${id}`)
+        .then(canvas =>{
+          canvas.toBlob((blob) =>{  // 2nd blob on disk
+            j["img_id"] = id;
+            j["img_name"] = this_img.name
+            j["img_size"] = formatBytes(this_img.size)
+            j["img_type"] = mime
+            j["img_blob_url"] = blobURL
+            j["img_canvasNode"] = canvas
+            j["ComSize"] = formatBytes(blob.size)
+            resolve(j) // lol, resolve must be here
+          }, mime, defaultCompression)
+        }) //end then
+  })// end promise
+} // end function
+
+// function to display image form file upload
+const displayImageData = (jobj) => {
+    // console.log(jobj)
+    // add card
+    addCardHTML(displayzone, jobj["img_blob_url"], jobj["img_id"], jobj["img_name"], jobj["img_size"],jobj["ComSize"],jobj["img_type"])
+    // add moda;
+    addModal(jobj["img_id"], jobj["img_name"], jobj["img_blob_url"], jobj["img_canvasNode"])
+    // bind delete method with revoke blob url, also delete from input
+}; // end display image
+
+const loadImage = async (url, elem) => {
+  return new Promise((resolve, reject) => {
+    elem.src = url;
+    elem.onload = () => resolve(elem); // resolve when elem.onload return elem
+    elem.onerror = reject; // error when elem.onerroe return reject
+  });
+}
+
+// canvas function
+const blob2canvas = async (blobURL,noteid) => {
+    const imgHTMLnode = new Image(); 
+    const canvas = document.createElement("canvas"); canvas.id=noteid
+    const ctx = canvas.getContext("2d"); ctx.fillStyle = "gray";
+    // load blobURL into imgHTMLnode
+    await loadImage(blobURL, imgHTMLnode)
+    canvas.width = imgHTMLnode.width; canvas.height = imgHTMLnode.height;
+    let sx = 0, sy = 0;
+    ctx.drawImage(imgHTMLnode, sx, sy);
+    // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
+    // must return with drew canvas
+    return canvas
+}
+
+const addModal = (hashid, img_name, blobURL,canvasDOMNode) => {
+    modal.innerHTML +=
+      `
+      <!-- Modal -->
+      <div class="modal fade" id="m${hashid}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div id="burl" class="d-none">${blobURL}</div>
+              <h5 class="modal-title" id="staticBackdropLabel">${img_name}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body modal-body-scroll">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      `
+      // add canvas
+      modal.querySelector(`#m${hashid}`).querySelector(".modal-body").appendChild(canvasDOMNode);
+      console.log('add modal', `m${hashid}`)
+    }
+
+// function to add carousel card to element 
+const addCardHTML = (ele, blobURL, idhash, img_name, img_size, size_compress,  img_type) =>{
+  ele.innerHTML += 
+      `
+      <!-- slide item -->
+      <div id="c${idhash}" class="swiper-slide card">
+        <button type="button" class="deletex" onclick="deleteModal('${idhash}','${blobURL}')">
+          <span>&times;</span>
+        </button>
+        <img class="rounded mx-auto d-block h-100" src="${blobURL}" alt="..." style="max-height:120px;width:200px;object-fit:cover"/>
+        <div class="card-body">
+          <h5 class="card-title">${img_name}</h5>
+          <p class="card-text">${(img_size)} -> ${size_compress}</p>
+
+          <!-- Buttons -->
+          <button type="button" class="btn btn-dark" onclick="downloadBlobCompress('${idhash}', '${img_name}','${img_type}',${defaultCompression})">Download</button>
+          
+        </div>
+      </div>
+      <!-- end slide item -->
+      `
+      //<button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#m${idhash}">Details</button>
+  // updates swiper
+  swiperUpdate()
+  console.log('add card',`c${idhash}`)
+}
+
+const deleteModal = (hashid, blobURL) => {
+    const c = document.querySelectorAll(`#c${hashid}`), m = document.querySelectorAll(`#m${hashid}`)
+
+    // remove modal
+    console.log(m)
+    m.forEach(e => e.remove());
+
+    // remove card
+    console.log(c)
+    c.forEach(e => e.remove());
+
+    // revoke blob
+    URL.revokeObjectURL(blobURL) // memory might not return
+
+    // update
+    swiperUpdate()
+    console.log('delete',`${hashid}`,`m${hashid}`)
+}
+
+// function to upload image
+const uploadImages = async (images) => {
+    const formData = new FormData();
+    [...images].forEach((image) => formData.append('images[]', image, image.name));
+
+  // do something
+};
+
+const downloadAll = () =>{
+  const zip = new JSZip();
+  // load every canvas presented on screen
+  const allModal = [...document.querySelectorAll('.modal')]; // make object into array
+  allModal.forEach((m) => { // ok
+      let url = m.querySelector('#burl').innerText;
+      let filename = m.querySelector('h5').innerText;
+      let savename = `com_${filename}`
+      zip.file(savename, urlToPromise(url), {binary:true});
+  });
+  // when everything has been downloaded, we can trigger the dl
+  zip.generateAsync({type:"blob"}).then((blob) => {
+    saveAs(blob, "compressed.zip");
+      console.log("done !");
+    }, function (e) {
+      console.log(e);
+    });
+}
+
+const urlToPromise = (url) => {
+    return new Promise(function(resolve, reject) {
+        JSZipUtils.getBinaryContent(url, function (err, data) {
+            if(err) {
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        });
+    });
+}
+
+const downloadBlobCompress = (hashid, img_name, img_mime, ratio) => {
+  const link = document.createElement("a");
+  const this_canvas = modal.querySelector(`#m${hashid}`).querySelector(".modal-body").querySelector("canvas")
+  // preview only size
+  this_canvas.toBlob((blob) =>{
+    saveAs(blob, `com_${img_name}`);
+  }, img_mime, ratio)
+}
+
+// function to calculate image size
+const formatBytes = (size, decimals = 2) => {
+    if (size === 0) return '0 bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+    const i = Math.floor(Math.log(size) / Math.log(k));
+
+    return parseFloat((size / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+
+// init swiper js
+const swiper = new Swiper(".mySwiper", {
+        spaceBetween: 30,
+        grabCursor: true,
+        loop: false,
+        // Pagination
+        pagination: {
+          el: ".swiper-pagination",
+          clickable: true,
+        },
+        // Next and previous navigation
+        navigation: {
+          nextEl: ".swiper-button-next",
+          prevEl: ".swiper-button-prev",
+        },
+        // Responsive breakpoints
+        breakpoints: {
+          0: {
+            slidesPerView: 1
+          },
+          768: {
+            slidesPerView: 2
+          },
+          1024: {
+            slidesPerView: 3
+          }
+        }
+      });
+
+const swiperUpdate = () =>{
+  swiper.update()
+  const slides = [...displayzone.children].length
+  totalslides.innerHTML = ` ${slides} images`
+  if (slides > 0) {downloadAllbutton.innerHTML = `<button type="button" class="btn btn-primary btn-sm" onclick="downloadAll()">Download All</button>`}
+}
+</script>
+
+
+<!-- style  -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+section {
+  position: relative;
+  height: 450px;
+  padding: 15px;
+  padding: 0 70px;
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.dropzone {
+  margin: 10px 0;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border: 3px dotted #a3a3a3;
+  border-radius: 5px;
+}
+
+.swiper-pagination {
+  position: absolute;
+}
+.swiper-pagination-bullet {
+  height: 7px;
+  width: 26px;
+  border-radius: 25px;
+  background: #111;
+}
+.swiper-button-next,
+.swiper-button-prev {
+  opacity: 0.7;
+  color: #111;
+  transition: all 0.3s ease;
+}
+.swiper-button-next:hover,
+.swiper-button-prev:hover {
+  opacity: 1;
+  color: #111;
+}
+
+/* Responsive media query code for small screens */
+@media (max-width: 768px) {
+  section {
+    padding: 15px;
+  }
+  .swiper-button-next,
+  .swiper-button-prev {
+    display: none;
+  }
+}
+
+.files-input {
+  display: none;
+}
+
+.input-btn {
+  padding: 0.6em 2em;
+  border: none;
+  outline: none;
+  color: rgb(255, 255, 255);
+  background: #111;
+  cursor: pointer;
+  position: relative;
+  z-index: 0;
+  border-radius: 10px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.input-btn:before {
+  content: "";
+  background: linear-gradient(
+    45deg,
+    #ff0000,
+    #ff7300,
+    #fffb00,
+    #48ff00,
+    #00ffd5,
+    #002bff,
+    #7a00ff,
+    #ff00c8,
+    #ff0000
+  );
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  background-size: 400%;
+  z-index: -1;
+  filter: blur(5px);
+  -webkit-filter: blur(5px);
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  animation: glowing-input-btn 20s linear infinite;
+  transition: opacity 0.3s ease-in-out;
+  border-radius: 10px;
+}
+
+@keyframes glowing-input-btn {
+  0% {
+    background-position: 0 0;
+  }
+  50% {
+    background-position: 400% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+.input-btn:after {
+  z-index: -1;
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: #222;
+  left: 0;
+  top: 0;
+  border-radius: 10px;
+}
+
+.modal-body-scroll{
+    overflow-x: auto;
+}
+
+.deletex {
+  cursor: pointer !important;
+  font-size: 30px;
+  position: absolute;
+  color: white;
+  border: none;
+  background: none;
+  right: 10px;
+  top: 10px;
+  line-height: 1;
+  z-index: 99;
+  padding: 0;
+}
+.deletex span {
+    height: 34px;
+    width: 34px;
+    background-color: black;
+    border-radius: 50%;
+    display: block;
+}
+
+
+</style>
+

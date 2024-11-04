@@ -1,0 +1,21 @@
+# CI/ CD on github page
+
+name: Theaimliu Blog
+description: Simple HTML Blog
+# if not specify auto pretty
+permalink: pretty # /:categories/:year/:month/:day/:title/
+baseurl: /blogz
+
+paginate: 10
+paginate_path: "blog/:num"
+
+# Render markdown using Kramdown
+# and also render html block
+markdown: kramdown
+kramdown:
+  parse_block_html: true
+
+exclude:
+- Gemfile
+- Gemfile.lock
+

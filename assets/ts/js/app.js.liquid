@@ -1,0 +1,36 @@
+---
+description : Render Landing Pages
+---
+    
+import {navRender} from "{% link assets/ts/js/navbar/navbar.js.liquid %}"
+import {heroRender} from "{% link assets/ts/js/hero/hero.js.liquid %}"
+import {blogRender} from "{% link assets/ts/js/blogs/blogland.js.liquid %}"
+import {footRender} from "{% link assets/ts/js/footer/footer.js.liquid %}"
+
+// core function on homepage
+export const s_arr = ['navbar', 'content', 'footer']
+
+export const construct = (arr) =>{
+    const html_arr = arr.map((x)=>{return `<div id=${x}></div>`})
+    return html_arr.join('\n')
+}
+
+export const docReady = async (fn) => {
+    if (document.readyState !== 'loading') {
+        console.log('Doc Ready')
+            try {fn();} catch(e) {return} // let it pass even if fn is void
+        } else {
+            document.addEventListener('DOMContentLoaded', fn);
+        }
+    }
+
+// render components only header and footer. i.
+export const renderHeadFoot = (highlight) => {
+    document.querySelector('#navbar').innerHTML = navRender(highlight); // navbar
+    document.querySelector('#footer').innerHTML = footRender(); // footer
+}
+
+// render only blogs
+export const renderBlogs = () => {
+    document.querySelector('#blog').innerHTML += blogRender(); // content
+}

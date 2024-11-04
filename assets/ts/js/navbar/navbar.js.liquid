@@ -1,0 +1,39 @@
+---
+---
+const navmenu = {
+    "Home" : "{{site.url}}", 
+    "Blog" : "{{site.url}}/pages/blog", 
+    "Contact" : "{{site.url}}/pages/contact", 
+    "About" : "{{site.url}}/pages/changelog"
+    }
+
+export const navRender = (choice) =>{
+    let html_nv = ''
+    for (let k in navmenu){
+        let key = k; let val = navmenu[key]
+        if(choice == key) html_nv += `<li class="nav-item">\n<a class="nav-link active" aria-current="page" href="${val}">${key}</a>\n</li>\n`
+        else html_nv += `<li class="nav-item">\n<a class="nav-link" aria-current="page" href="${val}">${key}</a>\n</li>\n`
+    }
+    return (`
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{site.url}}">The Aim Liu Blog</a>
+            <button class="navbar-toggler" 
+            type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#navbarNav" 
+            aria-controls="navbarNav" 
+            aria-expanded="false" 
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                ${html_nv}
+            </ul>
+            </div>
+        </div>
+        </nav>
+        `)
+}

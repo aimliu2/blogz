@@ -1,0 +1,40 @@
+---
+layout: blog
+title: The Aim Liu Blog
+title: TestBlogHTML
+description: This is test but in HTML
+category: Test
+tags: ['Test']
+categories: ['test', 'css']
+published: false
+cover_image : "https://cdn.pixabay.com/photo/2014/06/03/19/38/board-361516_1280.jpg"
+---
+
+
+<div class=container>
+<h1>{{page.description}}</h1>
+
+{% assign my_variable = 2 %}
+<p>{ assign my_variable = 2 }</p>
+{% if my_variable == 2 %}
+  show this line if my_variable == 2 (my_variable = {{my_variable}})
+{% endif %}
+
+{% comment %}
+  capture then if
+  capture : lets you assign text to a variable name \n included
+  capture only works with string
+{% endcomment %}
+
+
+<p>{% capture var %}3{% endcapture %}</p>
+<p>{capture var }3{endcapture }</p>
+
+{% if var == "3" %}
+  <p>Display this line if var == "3" (var is {{var}})</p>
+{% endif %}
+
+</div>
+
+    
+    
