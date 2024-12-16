@@ -1,6 +1,6 @@
 ---
 layout: blogImage
-title: 0.60 Img Byte Resize
+title: 0.80 Img Byte Resize
 description: Simple Image Byte Resize
 category: image
 categories: ['image','processing']
@@ -83,15 +83,6 @@ const setActive = (dropzone, active = true) => {
   }
 ));
 
-// dropzone.addEventListener('dragenter', (e) => {
-//     e.preventDefault();
-//     setActive(dropzone);
-// });
-// dropzone.addEventListener('dragover', (e) => {
-//     e.preventDefault();
-//     setActive(dropzone);
-// });
-
 dropzone.addEventListener('dragleave', (e) => {
     e.preventDefault();
     setActive(dropzone, false);
@@ -134,16 +125,16 @@ const handleImages = async (files) => {
     // UX sequencing
     // index and skeleton
     const jarr = validImages.map(indexSkeleton)
-    // process image
+    // process images
     Promise.all(jarr.map(processImageData)) 
     .then(j => {j.map(jobj => {
-          // console.log(jobj) // ok
+          // inject skeleton
           displayImageData(jobj)
       })// end map
     }) // end then 
 };
 
-const defaultCompression = 0.60
+const defaultCompression = 0.80
 
 const indexSkeleton = (this_img) => {
   // only need index
@@ -209,7 +200,7 @@ const loadImage = async (url, elem) => {
   return new Promise((resolve, reject) => {
     elem.src = url;
     elem.onload = () => resolve(elem); // resolve when elem.onload return elem
-    elem.onerror = reject; // error when elem.onerroe return reject
+    elem.onerror = reject; // error when elem.onerror return reject
   });
 }
 
