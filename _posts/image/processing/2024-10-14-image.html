@@ -1,6 +1,6 @@
 ---
 layout: blogImage
-title: 0.95 Img Byte Resize
+title: 0.60 Img Byte Resize
 description: Simple Image Byte Resize
 category: image
 categories: ['image','processing']
@@ -18,7 +18,7 @@ cover_image : "https://www.online.colostate.edu/global/images/degrees/soil-and-c
   <div id="dropzone" class="dropzone">
     <div class="card border-light text-center">
     <img class="mx-auto" src="{{site.baseurl}}/assets/images/upload.svg" alt="upload" width="100px"/>
-    <input type="file" class="files-input" id="images" accept="image/png, image/jpeg, image/webp" multiple />
+    <input type="file" class="files-input" id="images" accept="image/png, image/jpeg" multiple />
     <label class="input-btn" for="images">Choose multiple images</label>
     <h4>or drag & drop your PNG, JPEG files here</h4>
     </div> 
@@ -130,36 +130,66 @@ const acceptFormat = ['image/jpe','image/jpg', 'image/jpeg', 'image/png']
 
 const handleImages = async (files) => {
     // validate images
-    const validImages = [...files].filter((file) =>
-    acceptFormat.includes(file.type)
-    ); // Array of files [file1, file2, ...]
-    // try another logic sequencing
-    Promise.all(validImages.map(processImageData))
-      .then(jarr => { // [{}, {},...] Array of Objects
-        jarr.map(jobj => { 
+    const validImages = [...files].filter((file) => acceptFormat.includes(file.type)); // Array of files [file1, file2, ...]
+    // UX sequencing
+    // index and skeleton
+    const jarr = validImages.map(indexSkeleton)
+    // process image
+    Promise.all(jarr.map(processImageData)) 
+    .then(j => {j.map(jobj => {
+          // console.log(jobj) // ok
           displayImageData(jobj)
       })// end map
     }) // end then 
 };
 
-const defaultCompression = 0.95
+const defaultCompression = 0.60
+
+const indexSkeleton = (this_img) => {
+  // only need index
+  const j = new Object(), id = + new Date(), blobURL = URL.createObjectURL(this_img), mime = this_img.type; // 1st blob on disk
+  j["img_id"] = id;
+  j["img_name"] = this_img.name
+  j["img_size"] = formatBytes(this_img.size)
+  j["img_type"] = mime
+  j["img_blob_url"] = blobURL
+
+  // inject skeleton into displayzone
+  displayzone.innerHTML += `
+  <!-- slide item -->
+      <div id="c${id}" class="swiper-slide card">
+        <button type="button" class="deletex">
+          <span>&times;</span>
+        </button>
+        <img class="skeleton mx-4" style="height:120px; width:200px;"/>
+        <div class="card-body">
+          <h5 class="card-title"></h5>
+          <p class="card-text"></p>
+
+          <!-- Buttons -->
+          <button type="button" class="btn btn-dark" >Download</button>
+          
+        </div>
+      </div>
+      <!-- end slide item -->
+  `
+  swiperUpdate()
+  console.log('add skeleton',`c${id}`)
+
+  return j
+
+}
 
 // Why can't manipulate after this ?
-const processImageData = async (this_img) => {
+const processImageData = async (this_img_json) => {
     return new Promise(resolve => {
-      const j = new Object(), id = + new Date(), blobURL = URL.createObjectURL(this_img) // 1st blob on disk
-      const mime = this_img.type;
+      const id = this_img_json["img_id"], blobURL = this_img_json["img_blob_url"], mime = this_img_json["img_type"]
       blob2canvas(blobURL,`raw${id}`)
         .then(canvas =>{
           canvas.toBlob((blob) =>{  // 2nd blob on disk
-            j["img_id"] = id;
-            j["img_name"] = this_img.name
-            j["img_size"] = formatBytes(this_img.size)
-            j["img_type"] = mime
-            j["img_blob_url"] = blobURL
-            j["img_canvasNode"] = canvas
-            j["ComSize"] = formatBytes(blob.size)
-            resolve(j) // lol, resolve must be here
+            this_img_json["img_canvasNode"] = canvas
+            this_img_json["ComSize"] = formatBytes(blob.size)
+            resolve(this_img_json) // resolve compress value, must be here
           }, mime, defaultCompression)
         }) //end then
   })// end promise
@@ -168,10 +198,10 @@ const processImageData = async (this_img) => {
 // function to display image form file upload
 const displayImageData = (jobj) => {
     // console.log(jobj)
-    // add card
-    addCardHTML(displayzone, jobj["img_blob_url"], jobj["img_id"], jobj["img_name"], jobj["img_size"],jobj["ComSize"],jobj["img_type"])
+    // inject card data
+    addCardHTML(jobj)
     // add moda;
-    addModal(jobj["img_id"], jobj["img_name"], jobj["img_blob_url"], jobj["img_canvasNode"])
+    addModal(jobj)
     // bind delete method with revoke blob url, also delete from input
 }; // end display image
 
@@ -186,7 +216,7 @@ const loadImage = async (url, elem) => {
 // canvas function
 const blob2canvas = async (blobURL,noteid) => {
     const imgHTMLnode = new Image(); 
-    const canvas = document.createElement("canvas"); canvas.id=noteid
+    const canvas = document.createElement("canvas"); canvas.id = noteid
     const ctx = canvas.getContext("2d"); ctx.fillStyle = "gray";
     // load blobURL into imgHTMLnode
     await loadImage(blobURL, imgHTMLnode)
@@ -198,7 +228,8 @@ const blob2canvas = async (blobURL,noteid) => {
     return canvas
 }
 
-const addModal = (hashid, img_name, blobURL,canvasDOMNode) => {
+const addModal = (jobj) => {
+  const hashid = jobj["img_id"], img_name = jobj["img_name"], blobURL = jobj["img_blob_url"], canvasDOMNode = jobj["img_canvasNode"]
     modal.innerHTML +=
       `
       <!-- Modal -->
@@ -224,42 +255,44 @@ const addModal = (hashid, img_name, blobURL,canvasDOMNode) => {
       console.log('add modal', `m${hashid}`)
     }
 
-// function to add carousel card to element 
-const addCardHTML = (ele, blobURL, idhash, img_name, img_size, size_compress,  img_type) =>{
-  ele.innerHTML += 
-      `
-      <!-- slide item -->
-      <div id="c${idhash}" class="swiper-slide card">
-        <button type="button" class="deletex" onclick="deleteModal('${idhash}','${blobURL}')">
-          <span>&times;</span>
-        </button>
-        <img class="rounded mx-auto d-block h-100" src="${blobURL}" alt="..." style="max-height:120px;width:200px;object-fit:cover"/>
-        <div class="card-body">
-          <h5 class="card-title">${img_name}</h5>
-          <p class="card-text">${(img_size)} -> ${size_compress}</p>
 
-          <!-- Buttons -->
-          <button type="button" class="btn btn-dark" onclick="downloadBlobCompress('${idhash}', '${img_name}','${img_type}',${defaultCompression})">Download</button>
-          
-        </div>
-      </div>
-      <!-- end slide item -->
-      `
-      //<button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#m${idhash}">Details</button>
-  // updates swiper
-  swiperUpdate()
-  console.log('add card',`c${idhash}`)
+// function to add carousel card to element 
+const addCardHTML = (jobj) =>{
+  const id = jobj["img_id"], blobURL = jobj["img_blob_url"], img_name = jobj["img_name"], img_size = jobj["img_size"], size_compress = jobj["ComSize"], img_type = jobj["img_type"]
+  const ele = displayzone.querySelector(`#c${id}`)
+  const deleteButton = ele.querySelector(`.deletex`)
+  deleteButton.addEventListener('click', () => deleteModal(id,blobURL));
+  console.log(deleteButton)
+  const imgBlock = ele.getElementsByTagName("img")[0];
+  // remove class
+  imgBlock.className = ""
+  imgBlock.style = "";
+  // add class
+  imgBlock.className = "rounded mx-auto d-block h-100"
+  imgBlock.style = 'max-height:120px; width:200px; object-fit:cover'
+  imgBlock.src = blobURL
+  const cbody = ele.querySelector(".card-body")
+  const btitle = cbody.getElementsByTagName("h5")[0];
+  const titleText = document.createTextNode(`${img_name}`);
+  btitle.appendChild(titleText)
+  const btext = cbody.getElementsByTagName("p")[0];
+  const bodyText = document.createTextNode(`${(img_size)} -> ${size_compress}`);
+  btext.appendChild(bodyText)
+  const bbutton = cbody.getElementsByTagName("button")[0];
+  bbutton.addEventListener('click', () => downloadBlobCompress(id, img_name, img_type,defaultCompression));
+  
+  console.log('add card',`c${id}`)
 }
 
 const deleteModal = (hashid, blobURL) => {
     const c = document.querySelectorAll(`#c${hashid}`), m = document.querySelectorAll(`#m${hashid}`)
 
     // remove modal
-    console.log(m)
+    // console.log(m)
     m.forEach(e => e.remove());
 
     // remove card
-    console.log(c)
+    // console.log(c)
     c.forEach(e => e.remove());
 
     // revoke blob
@@ -360,11 +393,14 @@ const swiper = new Swiper(".mySwiper", {
         }
       });
 
+const downloadAllButtonHTML = `<button type="button" class="btn btn-primary btn-sm" onclick="downloadAll()">Download All</button>`
+
 const swiperUpdate = () =>{
   swiper.update()
   const slides = [...displayzone.children].length
   totalslides.innerHTML = ` ${slides} images`
-  if (slides > 0) {downloadAllbutton.innerHTML = `<button type="button" class="btn btn-primary btn-sm" onclick="downloadAll()">Download All</button>`}
+  if (slides > 0) {downloadAllbutton.innerHTML = downloadAllButtonHTML}
+  else {downloadAllbutton.innerHTML = ''}
 }
 </script>
 
@@ -523,6 +559,26 @@ section {
     display: block;
 }
 
+ /* THE LOADING EFFECT */
+ .skeleton {
+background-color: #e2e5e7;
+ /* The shine that's going to move across the skeleton: */
+background-image: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+background-size: 40px 100%; 
+/* width of the shine */
+background-repeat: no-repeat; 
+/* No need to repeat the shine effect */
+background-position: left -40px top 0;
+/* Place shine on the left side, with offset on the left based on the width of the shine - see background-size */
+animation: shine 1s ease infinite;  
+/* increase animation time to see effect in 'slow-mo' */
+}
 
+@keyframes shine {
+    to {
+         /* Move shine from left to right, with offset on the right based on the width of the shine - see background-size */
+        background-position: right -40px top 0;
+    }
+}
 </style>
 
