@@ -6,7 +6,7 @@ category: image
 categories: ['image','processing']
 tags: ['Html','Image']
 published: true
-note : upload card till thres i.e. 3 then start carousel on 4 and so on carousel active on 4th ?
+note : ver 1.4 fixed multi upload broken
 cover_image : "https://www.online.colostate.edu/global/images/degrees/soil-and-crop-sciences-1200.jpg"
 ---
 <div class="container">
@@ -88,7 +88,7 @@ dropzone.addEventListener('dragleave', (e) => {
     setActive(dropzone, false);
 });
 
-// bind handleImages functions
+// start function
 dropzone.addEventListener('drop', async (e) => {
     e.preventDefault();
     setActive(dropzone, false);
@@ -100,6 +100,7 @@ dropzone.addEventListener('drop', async (e) => {
     })
 });
 
+// start function
 filesInput.addEventListener('change', async (e) => {
     const { files } = e.target; // Filelist
     handleImages(files).then(()=>{
@@ -109,6 +110,7 @@ filesInput.addEventListener('change', async (e) => {
     
 });
 
+// helper function
 const isObjectEmpty = (objectName) => {
   return (
     objectName &&
@@ -118,32 +120,30 @@ const isObjectEmpty = (objectName) => {
 };
 
 const acceptFormat = ['image/jpe','image/jpg', 'image/jpeg', 'image/png']
+const defaultCompression = 0.80
 
+// trigger on `dropzone:drop` or `filesInput:change`
 const handleImages = async (files) => {
     // validate images
     const validImages = [...files].filter((file) => acceptFormat.includes(file.type)); // Array of files [file1, file2, ...]
     // UX sequencing
     // index and skeleton
-    const jarr = validImages.map(indexSkeleton)
+    const jarr = validImages.map(initSkeleton)
     // process images
     Promise.all(jarr.map(processImageData)) 
     .then(j => {j.map(jobj => {
-          // inject skeleton
+          // inject into skeleton
           displayImageData(jobj)
       })// end map
     }) // end then 
 };
 
-const defaultCompression = 0.80
-
-const indexSkeleton = (this_img) => {
-  // only need index
-  const j = new Object(), id = + new Date(), blobURL = URL.createObjectURL(this_img), mime = this_img.type; // 1st blob on disk
-  j["img_id"] = id;
-  j["img_name"] = this_img.name
-  j["img_size"] = formatBytes(this_img.size)
-  j["img_type"] = mime
-  j["img_blob_url"] = blobURL
+// triggered by handleImages()
+const initSkeleton = (this_img) => {
+  // only need some index to create skeleton
+  const j = new Object(), id = + new Date(), blobURL = URL.createObjectURL(this_img), mime = this_img.type; name=this_img.name // 1st blob on disk
+  // create json object
+  j["img_id"] = id; j["img_name"] = name; j["img_size"] = this_img.size; j["img_type"] = mime; j["img_blob_url"] = blobURL
 
   // inject skeleton into displayzone
   displayzone.innerHTML += `
@@ -158,28 +158,53 @@ const indexSkeleton = (this_img) => {
           <p class="card-text"></p>
 
           <!-- Buttons -->
-          <button type="button" class="btn btn-dark" >Download</button>
+          <button id="modal" type="button" class="btn btn-primary" data-bs-toggle="modal">Details</button>
+          <button id="download" type="button" class="btn btn-dark" >Download</button>
           
         </div>
       </div>
       <!-- end slide item -->
   `
+  // inject skeleton into modal zone
+  // 
+  modal.innerHTML +=
+  `
+  <!-- Modal -->
+      <div class="modal fade" id="m${id}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-xl modal-dialog modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div id="burl" class="d-none">${blobURL}</div>
+              <h5 class="modal-title" id="staticBackdropLabel">${name}</h5>
+              <div id="mime" class="d-none">${mime}</div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body modal-body-scroll">
+              <!-- add Canvas -->
+            </div>
+            <div class="modal-footer">
+              <div id="isCompressed" class="d-none"></div>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      `
   swiperUpdate()
-  console.log('add skeleton',`c${id}`)
-
+  console.log('add skeleton',`c${id}`,`m${id}`)
   return j
 
 }
 
-// Why can't manipulate after this ?
+// lol not fast enough
 const processImageData = async (this_img_json) => {
     return new Promise(resolve => {
       const id = this_img_json["img_id"], blobURL = this_img_json["img_blob_url"], mime = this_img_json["img_type"]
       blob2canvas(blobURL,`raw${id}`)
         .then(canvas =>{
+          this_img_json["img_canvasNode"] = canvas
           canvas.toBlob((blob) =>{  // 2nd blob on disk
-            this_img_json["img_canvasNode"] = canvas
-            this_img_json["ComSize"] = formatBytes(blob.size)
+            this_img_json["ComSize"] = blob.size
             resolve(this_img_json) // resolve compress value, must be here
           }, mime, defaultCompression)
         }) //end then
@@ -191,11 +216,12 @@ const displayImageData = (jobj) => {
     // console.log(jobj)
     // inject card data
     addCardHTML(jobj)
-    // add moda;
+    // inject modal data;
     addModal(jobj)
     // bind delete method with revoke blob url, also delete from input
 }; // end display image
 
+// helper function
 const loadImage = async (url, elem) => {
   return new Promise((resolve, reject) => {
     elem.src = url;
@@ -219,31 +245,24 @@ const blob2canvas = async (blobURL,noteid) => {
     return canvas
 }
 
+
+const canvas2blob = async (canvasNode,mime, ratio) => {
+  return new Promise(resolve => {
+    canvasNode.toBlob((blob) =>{
+        resolve(blob)
+      }, mime, ratio)
+  })
+}
+
 const addModal = (jobj) => {
-  const hashid = jobj["img_id"], img_name = jobj["img_name"], blobURL = jobj["img_blob_url"], canvasDOMNode = jobj["img_canvasNode"]
-    modal.innerHTML +=
-      `
-      <!-- Modal -->
-      <div class="modal fade" id="m${hashid}" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-          <div class="modal-content">
-            <div class="modal-header">
-              <div id="burl" class="d-none">${blobURL}</div>
-              <h5 class="modal-title" id="staticBackdropLabel">${img_name}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body modal-body-scroll">
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      `
-      // add canvas
-      modal.querySelector(`#m${hashid}`).querySelector(".modal-body").appendChild(canvasDOMNode);
-      console.log('add modal', `m${hashid}`)
+  const hashid = jobj["img_id"], canvasDOMNode = jobj["img_canvasNode"];img_size = jobj["img_size"], size_compress = jobj["ComSize"]
+  const initFlag = compressedText(img_size, size_compress)[1]
+  const flagVal = document.createTextNode(`${initFlag}`);
+  // add flag 
+  modal.querySelector(`#m${hashid}`).querySelector(".modal-footer").querySelector("#isCompressed").appendChild(flagVal)
+  // add canvas
+  modal.querySelector(`#m${hashid}`).querySelector(".modal-body").appendChild(canvasDOMNode);
+  console.log('add modal', `m${hashid}`)
     }
 
 
@@ -253,7 +272,7 @@ const addCardHTML = (jobj) =>{
   const ele = displayzone.querySelector(`#c${id}`)
   const deleteButton = ele.querySelector(`.deletex`)
   deleteButton.addEventListener('click', () => deleteModal(id,blobURL));
-  console.log(deleteButton)
+  // console.log(deleteButton)
   const imgBlock = ele.getElementsByTagName("img")[0];
   // remove class
   imgBlock.className = ""
@@ -267,12 +286,28 @@ const addCardHTML = (jobj) =>{
   const titleText = document.createTextNode(`${img_name}`);
   btitle.appendChild(titleText)
   const btext = cbody.getElementsByTagName("p")[0];
-  const bodyText = document.createTextNode(`${(img_size)} -> ${size_compress}`);
+  // validate after compress image
+  const initText = compressedText(img_size, size_compress)[0]
+  const mode = compressedText(img_size, size_compress)[1]  
+  const bodyText = document.createTextNode(initText)
   btext.appendChild(bodyText)
-  const bbutton = cbody.getElementsByTagName("button")[0];
-  bbutton.addEventListener('click', () => downloadBlobCompress(id, img_name, img_type,defaultCompression));
-  
+  const bbutton = cbody.querySelector("button#download");
+  bbutton.addEventListener('click', () => downloadBlobCompress(id, img_name, img_type,defaultCompression, mode));
+  let dbutton = cbody.querySelector("button#modal");
+  if(dbutton) {
+    dbutton.setAttribute("data-bs-target", `#m${id}`);
+  }
   console.log('add card',`c${id}`)
+}
+
+const compressedText = (before,after) => {
+  if(after > before) {
+    return [`${formatBytes(before)} Image's already compressed.`,0]
+  } else {
+    let before_size = formatBytes(before); after_size = formatBytes(after)
+    return [`${before_size} -> ${after_size}`,1]
+  }
+
 }
 
 const deleteModal = (hashid, blobURL) => {
@@ -296,33 +331,75 @@ const deleteModal = (hashid, blobURL) => {
 
 // function to upload image
 const uploadImages = async (images) => {
-    const formData = new FormData();
-    [...images].forEach((image) => formData.append('images[]', image, image.name));
-
+    // const formData = new FormData();
+    // [...images].forEach((image) => formData.append('images[]', image, image.name));
   // do something
 };
 
+const downloadBlobCompress = (hashid, img_name, img_mime, ratio, isCompressed) => {
+  const link = document.createElement("a");
+  const this_dataURL = modal.querySelector(`#m${hashid}`).querySelector("#burl").innerText
+  const this_canvas = modal.querySelector(`#m${hashid}`).querySelector(".modal-body").querySelector("canvas")
+  // download blob
+  if(isCompressed){ // save compress image
+    canvas2blob(this_canvas,img_mime, ratio).then(blob => saveAs(blob, `com_${img_name}`));
+  }
+  else { // save original image
+    fetch(this_dataURL).then(res => res.blob()).then(b => saveAs(b, `com_${img_name}`))
+  }
+  
+}
+// helper download all blob selection
+const blobDNmake = async (canvas, mime, ratio, blobURL, isCompressed, blobName) => {
+  const con = JSON.parse(isCompressed)
+  if(con){
+    // {"blob": cblob,"name":savename}
+    let cblob = await canvas2blob(canvas,mime, ratio)
+    let savename = `compressed_${filename}`
+    return {"blob": cblob,"name":savename}
+  }
+  else {
+    let cblob = await (await fetch(blobURL)).blob()
+    return {"blob": cblob,"name":blobName}
+  }
+}
+
+
+// download all using JSZip https://stuk.github.io/jszip/
 const downloadAll = () =>{
   const zip = new JSZip();
-  // load every canvas presented on screen
-  const allModal = [...document.querySelectorAll('.modal')]; // make object into array
-  allModal.forEach((m) => { // ok
-      let url = m.querySelector('#burl').innerText;
-      let filename = m.querySelector('h5').innerText;
-      let savename = `com_${filename}`
-      zip.file(savename, urlToPromise(url), {binary:true});
-  });
-  // when everything has been downloaded, we can trigger the dl
-  zip.generateAsync({type:"blob"}).then((blob) => {
-    saveAs(blob, "compressed.zip");
-      console.log("done !");
-    }, function (e) {
-      console.log(e);
-    });
+  const allModal = [...document.querySelectorAll('.modal')];
+  // use map and reduce
+  const compressBlob = allModal.map(async m => {
+    const this_canvas = m.querySelector("canvas")
+    const this_blobURL = m.querySelector('#burl').innerText;
+    const img_mime = m.querySelector('#mime').innerText;
+    const filename = m.querySelector('h5').innerText;
+    let ratio = defaultCompression // temporary
+    const this_isCompressed = m.querySelector(".modal-footer").querySelector("#isCompressed").innerText;
+    return await blobDNmake(this_canvas, img_mime, ratio, this_blobURL, this_isCompressed, filename)
+  })
+
+  Promise.all(compressBlob) 
+    .then(cmb => {
+      // reduce zipping
+      console.log(cmb)
+      // can't do on multiple files !?
+      cmb.forEach(b => {zip.file(b["name"], b["blob"], {binary:true});console.log(b.size)})
+    })// end then 
+    .then(()=>{
+      zip.generateAsync({type:"blob"}).then((blob) => {
+        console.log("compressed all download !");
+        saveAs(blob, "compressed.zip");
+        }, (e) => {
+          console.error(e);
+        });
+    })
+  
 }
 
 const urlToPromise = (url) => {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
         JSZipUtils.getBinaryContent(url, function (err, data) {
             if(err) {
                 reject(err);
@@ -333,16 +410,7 @@ const urlToPromise = (url) => {
     });
 }
 
-const downloadBlobCompress = (hashid, img_name, img_mime, ratio) => {
-  const link = document.createElement("a");
-  const this_canvas = modal.querySelector(`#m${hashid}`).querySelector(".modal-body").querySelector("canvas")
-  // preview only size
-  this_canvas.toBlob((blob) =>{
-    saveAs(blob, `com_${img_name}`);
-  }, img_mime, ratio)
-}
-
-// function to calculate image size
+// helper function to calculate image size
 const formatBytes = (size, decimals = 2) => {
     if (size === 0) return '0 bytes';
     const k = 1024;
